@@ -31,15 +31,14 @@ If you have multiple devices connected to the same network, i.e. if you have mul
 
 ##Directory Structure
 
-.
-├──README.md
-├──package.json - describes this package and its dependencies
-├──server.js - server code (JavaScript, Express, Socket.IO)
-├──batch
-│    ├──README FIRST.txt - Explains the .bat files
-│    ├──Server Keepalive.bat
-│    └──Server Launcher.bat
-└──client
-     ├──index.html - client code (HTML, CSS, JavaScript, AngularJS, Socket.IO)
-     └──lib - libraries used to make this app work
-		          
+    .
+    ├──README.md
+    ├──package.json - describes this package and its dependencies
+    ├──server.js - server code (JavaScript, Express, Socket.IO)
+    ├──batch
+    │    ├──README FIRST.txt - Explains the .bat files
+    │    ├──Server Keepalive.bat
+    │    └──Server Launcher.bat
+    └──client
+         ├──index.html - client code (HTML, CSS, JavaScript, AngularJS, Socket.IO)
+         └──lib - libraries used to make this app work
