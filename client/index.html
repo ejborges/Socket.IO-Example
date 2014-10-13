@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8"> <!-- http://www.w3schools.com/tags/tag_meta.asp -->
+    <meta name="viewport" content="width=device-width, initial-scale=1"> <!-- https://developer.mozilla.org/en-US/docs/Mozilla/Mobile/Viewport_meta_tag -->
+    <title>Socket.IO</title>
+    <style>
+        /* Just search CSS, W3Schools is good for html and css */
+        body {
+            -webkit-user-select: none;  /* -webkit-, -moz-, and -ms- are vendor prefixes for different browsers, look them up*/
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none; /* prevents user from highlighting or selecting text */
+        }
+        body:active, body:hover {
+            cursor: default;
+        }
+        table {
+            margin: 10px 0; /* 10 pixel margin on top and bottom and 0 pixel margin on left and right */
+        }
+        th {
+            text-align: right;
+        }
+        table.tags {
+            margin: 10px; /* 10px margin all around */
+        }
+        th.tags, td.tags {
+            width: 50px;
+            padding: 10px;
+            text-align: center;
+        }
+        td.when-tag-value-is-0 {
+            background-color: red;
+            cursor: pointer;
+        }
+        td.when-tag-value-is-1 {
+            background-color: green;
+            cursor: pointer;
+        }
+        .checkbox {
+            cursor: pointer;
+        }
+    </style>
+    <script type="text/javascript" src="lib/angular/1.2.25/angular.js"></script> <!-- https://angularjs.org/ -->
+    <script type="text/javascript" src="lib/ngSocketIO/ng-socket-io.js"></script> <!-- https://github.com/mbenford/ngSocketIO -->
+    <script src="/socket.io/socket.io.js"></script> <!-- http://socket.io/docs/ --> <!-- this file is auto created and served when the server is running with socket.io -->
+    <script>
+        // Here is a mix of JavaScript, AngularJS, and Socket.io
+        var app = angular.module('socket.io.app', ['socket-io']); // this module depends on socket-io from ngSocketIO, an
+                                                                  // AngularJS wrapper that helps with using socket.io within Angular
+
+        function socketController($scope, socket){  // to use socket.io on the client side, we have to include 'socket' from the 'socket-io' module in our controller
+            "use strict";
+
+            var logging = false,
+                newTag = function(id) {
+                    return {
+                        id: 'tag' + id,
+                        name: 'Tag ' + id,
+                        value: 0
+                    }
+                };
+            $scope.loggingStatus = 'Disabled';
+
+            // http://socket.io/docs/#using-with-express-3/4
+            // http://stackoverflow.com/a/10099325/3873384
+
+            // this is what receives tagsPackage when server sends it upon client-server connection
+            socket.on('welcome kit', function(welcomeKit) {
+                $scope.socketId = welcomeKit.socketId;
+                $scope.tagsPackage = welcomeKit.tagsPackage;
+                $scope.count = $scope.tagsPackage.count;
+                if (logging) console.log("Received welcomeKit with socketId: " + $scope.socketId +
+                        "\nReceived tagsPackage: " + JSON.stringify($scope.tagsPackage) + "\n$scope.count set to " + $scope.count);
+            });
+
+            // do this when the server emits 'update tag value' along with the change
+            socket.on('update tag value', function(change) {
+                if(change.id == $scope.tagsPackage.id){ // if the ID of the package the server sent does not match the ID of the package this client has
+                    if (logging) console.log("Updated " + $scope.tagsPackage.tags[change.tagId].name + " from " + $scope.tagsPackage.tags[change.tagId].value + " to " + change.value);
+                    $scope.tagsPackage.tags[change.tagId].value = change.value;
+                }
+                else {
+                    if(logging) console.log("\ntagsPackage ID mismatch with server. This tagsPackage ID: " + $scope.tagsPackage.id +
+                            ", Server tagsPackage ID: " + change.id + "\nRequesting new tagsPackage.\n");
+                    socket.emit('get tagsPackage'); // tell the server to return the package it has
+                }
+            });
+
+            socket.on('update tag count', function(count){
+                if(count.id == $scope.tagsPackage.id) {
+                    var difference;
+                    if (logging) console.log("Updated tag count from " + $scope.tagsPackage.count + " to " + count.value);
+                    if (count.value < $scope.tagsPackage.count) {
+                        difference = $scope.tagsPackage.count - count.value;
+                        do {
+                            if (logging) console.log("Deleted " + $scope.tagsPackage.tags['tag' + (count.value + difference)].name);
+                            delete $scope.tagsPackage.tags['tag' + (count.value + difference)];
+                            difference--;
+                        } while (difference);
+                    }
+                    else if (count.value > $scope.tagsPackage.count) {
+                        difference = count.value - $scope.tagsPackage.count;
+                        do {
+                            $scope.tagsPackage.tags['tag' + (count.value - difference + 1)] = newTag((count.value - difference + 1));
+                            if (logging) console.log("Created " + $scope.tagsPackage.tags['tag' + (count.value - difference + 1)].name);
+                            difference--;
+                        } while (difference);
+                    }
+                    $scope.tagsPackage.count = $scope.count = count.value;
+                }
+                else {
+                    if(logging) console.log("\ntagsPackage ID mismatch with server. This tagsPackage ID: " + $scope.tagsPackage.id +
+                            ", Server tagsPackage ID: " + count.id + "\nRequesting new tagsPackage.\n");
+                    socket.emit('get tagsPackage');
+                }
+            });
+
+            $scope.countInputChange = function() {
+                // AngularJS automatically makes $scope.count change whenever the value in the number input box changes, see HTML below
+                if($scope.count != null && $scope.count != undefined) {
+                    var difference;
+                    if (logging) console.log("Changed tag count from " + $scope.tagsPackage.count + " to " + $scope.count);
+                    if ($scope.count < $scope.tagsPackage.count) {
+                        difference = $scope.tagsPackage.count - $scope.count;
+                        do {
+                            if (logging) console.log("Deleted " + $scope.tagsPackage.tags['tag' + ($scope.count + difference)].name);
+                            delete $scope.tagsPackage.tags['tag' + ($scope.count + difference)];
+                            difference--;
+                        } while (difference);
+                    }
+                    else if ($scope.count > $scope.tagsPackage.count) {
+                        difference = $scope.count - $scope.tagsPackage.count;
+                        do {
+                            $scope.tagsPackage.tags['tag' + ($scope.count - difference + 1)] = newTag(($scope.count - difference + 1));
+                            if (logging) console.log("Created " + $scope.tagsPackage.tags['tag' + ($scope.count - difference + 1)].name);
+                            difference--;
+                        } while (difference);
+                    }
+                    $scope.tagsPackage.count = $scope.count;
+                    socket.emit("tag count changed", {id: $scope.tagsPackage.id, value: $scope.count}); // tell the server to change the tag count on the server side
+                }
+            };
+
+            $scope.tagClick = function(tag) {
+                if (logging) console.log(tag.name + " clicked. Value changed from " + tag.value + " to " + (tag.value + 1) % 2);
+                tag.value = (tag.value + 1) % 2;
+                socket.emit('tag value changed', {id: $scope.tagsPackage.id, tagId: tag.id, value: tag.value}); // tell the server to change this tag's value on the server side
+            };
+
+            $scope.logging = function() {
+                logging = !logging;
+                if (logging) $scope.loggingStatus = "Enabled - Open your browser's console window";
+                else $scope.loggingStatus = "Disabled";
+            }
+
+
+        }
+    </script>
+</head>
+<body ng-app="socket.io.app"> <!-- https://docs.angularjs.org/api/ng/directive/ngApp -->
+    <div ng-controller="socketController"> <!-- https://docs.angularjs.org/api/ng/directive/ngController -->
+
+        <!-- http://www.w3schools.com/html/html_tables.asp -->
+        <table>
+            <tr>
+                <th>Socket ID:</th>
+                <td>{{socketId}}</td>
+            </tr>
+            <tr>
+                <th>Package ID:</th>
+                <td>{{tagsPackage.id}}</td>
+            </tr>
+        </table>
+
+        <!-- https://docs.angularjs.org/api/ng/input/input%5Bcheckbox%5D -->
+        <label>Logging: <input class="checkbox" type="checkbox" ng-click="logging()"> {{loggingStatus}}</label><br>
+
+        <!-- https://docs.angularjs.org/api/ng/input/input%5Bnumber%5D -->
+        <form name="countForm">
+            <label>
+                Tag Count
+                <input type="number" name="countInput" ng-model="count" min="0" max="9" ng-change="countInputChange()" required>
+            </label>
+            <span class="error" style="color: red" ng-show="countForm.countInput.$error.number">Not a Number</span>
+        </form>
+
+        <!-- http://www.w3schools.com/html/html_tables.asp -->
+        <table class="tags">
+            <tr>
+                <th class="tags">Tag</th>
+                <th class="tags">Check</th>
+                <th class="tags">Value</th>
+                <th class="tags">Color</th>
+            </tr>
+            <tr ng-repeat="tag in tagsPackage.tags"> <!-- https://docs.angularjs.org/api/ng/directive/ngRepeat -->
+                <td class="tags">{{tag.name}}</td>
+                <td class="tags">
+                    <label>
+                        <input class="checkbox" type="checkbox" ng-click="tagClick(tag)" ng-checked="tag.value"> <!-- https://docs.angularjs.org/api/ng/directive/ngChecked -->
+                    </label>
+                </td>
+                <td class="tags">{{tag.value}}</td>
+
+                <!-- dragselect http://stackoverflow.com/a/23213676    http://plnkr.co/edit/cCsLf6g83Xhg72mePoFf?p=preview   wish I had time to implement this...-->
+                <td ng-class="'when-tag-value-is-' + tag.value.toString()" ng-click="tagClick(tag)"></td>
+            </tr>
+            <tr ng-hide="tagsPackage.count > 0"> <!-- https://docs.angularjs.org/api/ng/directive/ngHide -->
+                <td  class="tags" colspan="4">No tags to display</td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>
