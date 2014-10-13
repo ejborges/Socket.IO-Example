@@ -11,6 +11,7 @@ A simple example for demonstrating how to use and work with [socket.io](http://s
 5. In the terminal window inside the Socket.IO-Example folder, run: `npm install`. 
 	- This command will look at the dependencies listed in the package.json file and automatically download them into a folder called `node_modules`. This is required for the server and site to work properly. 
 6. In the terminal window within the same directory, go ahead and run `nodemon server.js` if you are using nodemon, or run `node server.js` if you are not using nodemon. This will start up the server.
+	- Alternatively, if you are using nodemon, you can go into the batch folder and run `Server Launcher.bat`. Be sure to **read** the README FIRST.txt first!
 	- If you encounter the error `listen EADDRINUSE`, this means that the server address on port 3000 is already in use. You can:
 		- Close the process using port 3000
 		- Edit `server.js` variable `portNum` on line 14 to be another value
